@@ -18,8 +18,10 @@ syntactically valid address and immediately creates an active, signed-in account
 
 ## Scope
 
-- **Primary: application level.** Ships with the web image, applies to every deployment, and is the
-  only layer that can reason about the email address itself.
+- **Primary: application level.** Ships with the web image and can check the email address itself.
+  The domain policy runs on TraceRoot Cloud production, identified by the configured
+  `BETTER_AUTH_URL` origin `https://app.traceroot.ai`. This keeps test and private email domains
+  usable for signup on local, staging, and self-hosted deployments.
 - **Secondary: edge WAF** (`traceroot-infra`). Per-address throttling at the edge is a useful
   backstop against volumetric abuse, but it is a separate change in that repo and is not part of
   this stack.
@@ -51,5 +53,6 @@ PR4 adds a third-party dependency and is optional.
 ## Testing
 
 - Unit tests per module (policy table, verification wiring, rate-limit storage).
-- Playwright e2e (`frontend/ui/e2e/signup-hardening.spec.ts`): reserved/disposable domains rejected,
-  valid signup requires verification before sign-in, and repeated signups from one IP are throttled.
+- Better Auth integration tests check rejection of reserved and disposable domains on TraceRoot Cloud.
+- Playwright e2e (`frontend/ui/e2e/signup-hardening.spec.ts`) checks local signup with reserved and
+  disposable domains. The verification and rate-limiting PRs add coverage for their own behavior.

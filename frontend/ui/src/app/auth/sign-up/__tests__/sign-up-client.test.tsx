@@ -25,6 +25,8 @@ vi.mock("@/lib/auth-client", () => ({
 
 import { SignUpClient } from "../sign-up-client";
 
+const signUpProps = { googleAuthConfigured: false, emailDomainPolicyEnabled: false };
+
 function setParams(params: Record<string, string>) {
   searchParams = new URLSearchParams(params);
 }
@@ -49,14 +51,17 @@ afterEach(() => {
 });
 
 describe("SignUpClient", () => {
-  it("sends a normal signup straight to onboarding", async () => {
+  it("submits a test-domain signup and onboards outside TraceRoot Cloud", async () => {
     mocks.signUpEmail.mockResolvedValue({ error: null });
 
-    render(<SignUpClient googleAuthConfigured={false} />);
-    fillForm();
+    render(<SignUpClient {...signUpProps} />);
+    fillForm("kai@workspace.test");
     fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/onboarding"));
+    expect(mocks.signUpEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "kai@workspace.test" }),
+    );
   });
 
   it("routes a device-login signup through onboarding, carrying the device URL back", async () => {
@@ -67,7 +72,7 @@ describe("SignUpClient", () => {
     setParams({ callbackUrl: "/device?user_code=ABCD1234" });
     mocks.signUpEmail.mockResolvedValue({ error: null });
 
-    render(<SignUpClient googleAuthConfigured={false} />);
+    render(<SignUpClient {...signUpProps} />);
     fillForm();
     fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
@@ -90,7 +95,7 @@ describe("SignUpClient", () => {
     setParams({ callbackUrl: "/device?user_code=ABCD1234" });
     mocks.signInSocial.mockResolvedValue(undefined);
 
-    render(<SignUpClient googleAuthConfigured={true} />);
+    render(<SignUpClient {...signUpProps} googleAuthConfigured />);
     fireEvent.click(screen.getByRole("button", { name: "Google" }));
 
     await waitFor(() => expect(mocks.signInSocial).toHaveBeenCalled());
@@ -106,7 +111,7 @@ describe("SignUpClient", () => {
     setParams({ callbackUrl: "/projects/p1/traces" });
     mocks.signUpEmail.mockResolvedValue({ error: null });
 
-    render(<SignUpClient googleAuthConfigured={false} />);
+    render(<SignUpClient {...signUpProps} />);
     fillForm();
     fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
@@ -119,7 +124,7 @@ describe("SignUpClient", () => {
     setParams({ callbackUrl: "/device-settings" });
     mocks.signUpEmail.mockResolvedValue({ error: null });
 
-    render(<SignUpClient googleAuthConfigured={false} />);
+    render(<SignUpClient {...signUpProps} />);
     fillForm();
     fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
@@ -129,7 +134,7 @@ describe("SignUpClient", () => {
   it("carries the callback to the sign-in link", () => {
     setParams({ callbackUrl: "/device?user_code=ABCD1234" });
 
-    render(<SignUpClient googleAuthConfigured={false} />);
+    render(<SignUpClient {...signUpProps} />);
     const link = screen.getByRole("link", { name: "Sign in" });
     expect(link.getAttribute("href")).toBe(
       `/auth/sign-in?callbackUrl=${encodeURIComponent("/device?user_code=ABCD1234")}`,
@@ -140,7 +145,7 @@ describe("SignUpClient", () => {
     ["kai@example.com", "This email domain can't receive mail"],
     ["kai@mailinator.com", "Disposable email addresses aren't supported"],
   ])("shows the rejection for %s inline without calling the server", async (email, message) => {
-    render(<SignUpClient googleAuthConfigured={false} />);
+    render(<SignUpClient {...signUpProps} emailDomainPolicyEnabled />);
     fillForm(email);
     fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
@@ -149,7 +154,7 @@ describe("SignUpClient", () => {
   });
 
   it("uses a bare sign-in link when there is no callback", () => {
-    render(<SignUpClient googleAuthConfigured={false} />);
+    render(<SignUpClient {...signUpProps} />);
     const link = screen.getByRole("link", { name: "Sign in" });
     expect(link.getAttribute("href")).toBe("/auth/sign-in");
   });
